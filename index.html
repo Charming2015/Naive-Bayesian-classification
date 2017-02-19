@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>朴素贝叶斯</title>
+</head>
+<body>
+	<script>
+var StatisticalDesc = function(arr , num){
+	var newArr = new Array;
+	for(var i in arr){
+		newArr[i] = arr[i]
+	}
+	var arrLen = newArr.length;
+	var total = 0,
+		mean = 0,  //均值
+		variance = 0,  //方差
+		sd = 0,  // 标准差
+		mode = 0,  //众数
+		median = 0; //中位数
+	// 计算均值
+	for(var i in newArr ){
+		total += newArr[i]
+	}
+	mean = total / arrLen;
+
+	/*
+	计算方差
+	注意估计方差的方法
+	http://baike.baidu.com/item/%E6%96%B9%E5%B7%AE	
+	*/
+	for(var i in newArr){
+		variance += (newArr[i]-mean)*(newArr[i]-mean)
+	}
+
+	/*
+	关于除以n还是除以n-1
+	如是总体（即估算总体方差），根号内除以n
+	如是抽样（即估算样本方差），根号内除以（n-1）
+	*/
+	variance = variance.toFixed(6) / (arrLen-1)
+	// 计算标准差
+	sd = Math.sqrt(variance)
+	// 计算中位数
+	newArr.sort(function(a,b){
+		return a-b
+	})
+	if(arrLen % 2 == 0){
+		median = (newArr[arrLen/2] + newArr[arrLen/2-1]) / 2;
+	}else{
+		median = newArr[Math.floor(arrLen/2)]
+	}
+	// 计算众数
+	var maxTimes = 0;
+	for(var i in newArr){
+		var temp = this.calcRepeat(newArr,newArr[i]);
+		if(maxTimes < temp){
+			maxTimes = temp;
+			mode = newArr[i];
+		}
+	}
+	if(maxTimes == 1){
+		mode = 'none'
+	}
+	// 保留小数位
+	if(num) {
+		sd = sd.toFixed(num)
+		mean = mean.toFixed(num)
+		variance = variance.toFixed(num)
+	};
+	return {mean:mean,variance : variance , sd:sd , median:median, mode:mode};
+}
+StatisticalDesc.prototype.calcRepeat = function(arr , value){
+	var times = 0;
+	for(var i in arr ){
+		if(arr[i] == value){
+			times ++
+		}
+	}
+	return times;
+}
+
+var Bayes = function(data,obj){
+	this.data = data;
+	this.maleArr = [];
+	this.femaleArr = [];
+	this.obj = obj;
+	this.type_1 = this.data[0].type;
+	this.type_2 = '';
+}
+Bayes.prototype.init = function(){
+	this.class();
+	var p_male = this.calcP(this.maleArr) 
+	var p_female = this.calcP(this.femaleArr) 
+	if(p_male > p_female){
+		console.log('猜测为'+this.type_1,parseInt(p_male/p_female))
+		return '猜测为'+this.type_1+'  概率倍数：' + parseInt(p_male/p_female)
+	}else{
+		console.log('猜测为'+this.type_2,parseInt(p_female/p_male))
+		return '猜测为'+ this.type_2 +'  概率倍数：' + parseInt(p_female/p_male)
+	}
+}
+// 把数据先分类
+Bayes.prototype.class = function(){
+	for(var i in this.data){
+		if(this.data[i].type == this.type_1){
+			this.maleArr.push( this.data[i] )
+		}else{
+			this.femaleArr.push( this.data[i] )
+			this.type_2 = this.data[i].type
+		}
+	}
+}
+// 计算每部分的概率（正态分布）
+Bayes.prototype.norDis = function( x , mean , variance){
+	var deno = Math.sqrt(2 * Math.PI * variance );
+	var exp = -(x-mean)*(x-mean)/(2* variance )
+	return Math.pow(Math.E , exp)/deno
+}
+// 计算总的概率
+Bayes.prototype.calcP = function(arr,obj){
+	var allArr = [];
+	for(var i in arr[0]){
+		if( i != 'type'){
+			allArr[i] = [];
+		}
+	}
+	for(var i in arr){
+		for(k in arr[0]){
+			if( k != 'type'){
+				allArr[k].push(arr[i][k])
+			}
+		}
+	}	
+
+	var p_temp = 1;
+	for(var i in allArr){
+		var temp_statDesc = new StatisticalDesc(allArr[i] , 3);
+		p_temp *= this.norDis(this.obj[i],temp_statDesc.mean,temp_statDesc.variance)
+	}
+
+	var p_type = arr.length / this.data.length
+	var p_guess = p_temp * p_type
+	
+	return p_guess;
+}
+window.onload = function(){
+	var data = [
+		{type:'男',height:6 　 , weight:180 , foot:　12 },
+		{type:'男',height:5.92 , weight:190 , foot:　11 },
+		{type:'男',height:5.58 , weight:170 , foot:　12 },
+		{type:'男',height:5.92 , weight:165 , foot:　10 },
+		{type:'女',height:5 　 , weight:100 , foot:　6 },
+		{type:'女',height:5.5  , weight:150 , foot:　8 },
+		{type:'女',height:5.42 , weight:130 , foot:　7 },
+		{type:'女',height:5.75 , weight:150 , foot:　9},
+	]
+	var bayes = new Bayes(data,{height:6,weight:130,foot:8})
+	document.write(bayes.init())
+}
+
+	</script>
+</body>
+</html>
